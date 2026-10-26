@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>출장비 신청 도우미</title>
+<style>
+  :root{
+    --bg:#f1f3f6; --panel:#fff; --line:#d7dce3; --line2:#e8ecf1;
+    --ink:#1b2430; --sub:#5d6b7c; --accent:#1f5fbf; --accent2:#e8f0fc;
+    --head:#f4f6f9; --ok:#0f7b4f; --warn:#b4530a;
+    color-scheme: light;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:14px/1.5 "Malgun Gothic","맑은 고딕",system-ui,-apple-system,sans-serif}
+  .wrap{max-width:1560px;margin:0 auto;padding:18px}
+  header.top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+  header.top h1{font-size:20px;margin:0;letter-spacing:-.3px}
+  header.top .hint{color:var(--sub);font-size:12.5px}
+
+  .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+  @media (max-width:1180px){ .grid{grid-template-columns:minmax(0,1fr)} }
+
+  section.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+               margin-bottom:16px;overflow:hidden}
+  .card > h2{margin:0;padding:11px 14px;font-size:14.5px;background:var(--head);
+             border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .card > h2 .no{display:inline-flex;align-items:center;justify-content:center;
+     width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;flex:none}
+  .card > h2 .right{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+  .body{padding:14px}
+
+  label.fld{display:block;font-size:12px;color:var(--sub);margin-bottom:4px}
+  input,select{font:inherit;color:inherit;background:#fff;border:1px solid var(--line);
+               border-radius:6px;padding:6px 8px;width:100%}
+  input:focus,select:focus{outline:2px solid var(--accent2);border-color:var(--accent)}
+  input[type=number]{text-align:right}
+  input[readonly]{background:#f6f8fa;color:#2b3645}
+
+  .period{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap}
+  .ymd{display:flex;align-items:center;gap:4px}
+  .ymd input{width:72px}
+  .ymd input.m,.ymd input.d{width:56px}
+  .ymd span{color:var(--sub);font-size:12.5px}
+  .tilde{padding:0 2px 6px;color:var(--sub)}
+  .dur{margin-left:auto;background:var(--accent2);border:1px solid #c6dafb;color:#174a99;
+       border-radius:6px;padding:6px 12px;font-weight:700;white-space:nowrap}
+  .dur.bad{background:#fdeaea;border-color:#f3c2c2;color:#a32020}
+
+  table.sheet{width:100%;border-collapse:collapse;margin-top:12px}
+  table.sheet th,table.sheet td{border:1px solid var(--line);padding:7px 8px;text-align:center;font-size:13px}
+  table.sheet th{background:var(--head);font-weight:600;white-space:nowrap}
+  table.sheet td input{border:0;padding:4px 2px;text-align:right;background:transparent}
+  table.sheet td input:focus{outline:2px solid var(--accent2);border-radius:4px}
+  table.sheet td.calc{background:#fafbfd;text-align:right;padding-right:10px}
+  table.sheet td.total{background:#eef4fe;font-weight:700;text-align:right;padding-right:10px}
+  .num{font-variant-numeric:tabular-nums}
+
+  .note{font-size:12px;color:var(--sub);margin-top:8px;line-height:1.6}
+  .note b{color:var(--ink)}
+  .flag{margin-top:10px;background:#fff8ed;border:1px solid #f0dcbd;border-radius:7px;
+        padding:9px 11px;font-size:12.2px;color:#6b4a18;line-height:1.6}
+
+  .row{display:grid;gap:10px}
+  .row.c3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .row.c4{grid-template-columns:repeat(4,minmax(0,1fr))}
+  @media (max-width:560px){ .row.c3,.row.c4{grid-template-columns:repeat(2,minmax(0,1fr))} }
+
+  button{font:inherit;border:1px solid var(--line);background:#fff;color:var(--ink);
+         border-radius:6px;padding:6px 12px;cursor:pointer}
+  button:hover{background:#f3f6fa}
+  button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.pri:hover{background:#17509f}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+
+  .framebox{overflow-x:auto}
+  .frame{display:block;width:100%;min-width:1215px;height:760px;
+         border:1px solid var(--line);border-radius:8px;background:#fff}
+  .urlbar{margin-top:10px;font-size:11.5px;color:var(--sub);word-break:break-all;
+          background:#f6f8fa;border:1px solid var(--line2);border-radius:6px;padding:6px 8px}
+  .status{font-size:12px;margin-top:8px;min-height:17px}
+  .status.ok{color:var(--ok)} .status.err{color:#a32020}
+
+  .srcnote{font-size:11.5px;color:var(--sub);margin-top:6px}
+
+  .helpbar{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin-bottom:14px}
+  .help{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#f7f9fc;
+        border:1px solid var(--line2);border-radius:8px;padding:8px 10px;
+        font-size:12.5px;color:var(--sub)}
+  .help .tag{background:var(--accent2);color:#174a99;border:1px solid #c6dafb;border-radius:5px;
+             padding:2px 7px;font-weight:700;font-size:11.5px;flex:none}
+  .help b{color:var(--ink)}
+  .help .sp{margin-left:auto}
+  .help button{padding:4px 10px;font-size:12.5px}
+
+  @media print{
+    body{background:#fff}
+    .wrap{max-width:none;padding:0}
+    .grid{display:block}
+    .no-print{display:none !important}
+    section.card{border:0;margin-bottom:18px;break-inside:avoid}
+    .card > h2{background:#fff;border-bottom:1px solid #000}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <h1>출장비 신청 도우미</h1>
+    <span class="hint">출장기간만 입력하면 정산내역서 · 자차 운임 · 오피넷 유가 조회가 한 화면에서 끝납니다.
+    네이버지도 길찾기는 2번의 <b>거리</b> 칸 위 버튼으로 엽니다.</span>
+  </header>
+
+  <div class="grid">
+
+    <!-- ───────── 좌측 ───────── -->
+    <div>
+
+      <!-- 1. 출장 정산내역서 -->
+      <section class="card">
+        <h2><span class="no">1</span>출장 정산내역서
+          <span class="right no-print">
+            <button type="button" id="btnPrint">인쇄 / PDF 저장</button>
+          </span>
+        </h2>
+        <div class="body">
+
+          <div class="period">
+            <div>
+              <label class="fld">출장 시작일</label>
+              <div class="ymd">
+                <input type="number" id="sy" class="y" min="2000" max="2099"><span>년</span>
+                <input type="number" id="sm" class="m" min="1" max="12"><span>월</span>
+                <input type="number" id="sd" class="d" min="1" max="31"><span>일</span>
+              </div>
+            </div>
+            <div class="tilde">~</div>
+            <div>
+              <label class="fld">출장 종료일</label>
+              <div class="ymd">
+                <input type="number" id="ey" class="y" min="2000" max="2099"><span>년</span>
+                <input type="number" id="em" class="m" min="1" max="12"><span>월</span>
+                <input type="number" id="ed" class="d" min="1" max="31"><span>일</span>
+              </div>
+            </div>
+            <button type="button" id="btnToday" class="no-print" style="margin-bottom:1px">오늘로</button>
+            <div class="dur" id="dur">( 0 )박 ( 1 )일</div>
+          </div>
+
+          <div class="note" id="periodText" style="margin-top:10px"></div>
+
+          <table class="sheet">
+            <thead>
+              <tr>
+                <th style="width:14%">성명</th>
+                <th>자차이용총운임</th>
+                <th>대중교통요금</th>
+                <th>숙박비</th>
+                <th>일비</th>
+                <th>식비</th>
+                <th>계</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><input type="text" id="name1" value="" placeholder="성명" style="text-align:center"></td>
+                <td class="calc num" id="cCar">0</td>
+                <td><input type="number" id="iTrans" value="0" min="0" step="10"></td>
+                <td><input type="number" id="iStay" value="0" min="0" step="10"></td>
+                <td class="calc num" id="cDaily">0</td>
+                <td class="calc num" id="cMeal">0</td>
+                <td class="total num" id="cSum">0</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="row c3" style="margin-top:12px">
+            <div>
+              <label class="fld">일비 단가 (1일당)</label>
+              <input type="number" id="rateDaily" value="25000" min="0" step="1000">
+            </div>
+            <div>
+              <label class="fld">식비 단가 (1일당)</label>
+              <input type="number" id="rateMeal" value="25000" min="0" step="1000">
+            </div>
+            <div>
+              <label class="fld">일비·식비 산정 기준</label>
+              <select id="basis">
+                <option value="days" selected>일수 기준 (6일 → ×6)</option>
+                <option value="nights">박수 기준 (5박 → ×5)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="note" id="allowCalc"></div>
+
+          <div class="note no-print" style="margin-top:8px">
+            기준 : 일비·식비는 각각 <b>일수 × 25,000원</b>입니다. (예 : 3박 4일 → 각 100,000원)
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ───────── 우측 ───────── -->
+    <div>
+
+      <!-- 2. 자차이용자 운임산출 계산기 -->
+      <section class="card">
+        <h2><span class="no">2</span>자차이용자 운임산출 계산기</h2>
+        <div class="body">
+
+          <div class="helpbar no-print">
+            <div class="help">
+              <span class="tag">거리</span>네이버지도 길찾기에서 확인
+              <span class="sp"></span>
+              <button type="button" class="pri" id="btnMapOpen">네이버 지도 바로가기</button>
+              <button type="button" id="btnCapMap">화면 캡쳐</button>
+            </div>
+            <div class="help">
+              <span class="tag">단가</span>오피넷 <b>출발일 보통휘발유</b> 가격
+              <span class="sp"></span>
+              <button type="button" id="btnJumpOpi">아래 표로 이동 ↓</button>
+            </div>
+          </div>
+          <div class="status no-print" id="mapStatus" style="margin:-8px 0 10px"></div>
+
+          <div class="row c4">
+            <div>
+              <label class="fld">자차이용자</label>
+              <input type="text" id="driver" placeholder="성명">
+            </div>
+            <div>
+              <label class="fld">거리 (Km)</label>
+              <input type="number" id="dist" value="0" min="0" step="0.1">
+            </div>
+            <div>
+              <label class="fld">단가 (출발일 기준)</label>
+              <input type="number" id="price" value="0" min="0" step="0.01">
+            </div>
+            <div>
+              <label class="fld">유종</label>
+              <select id="fuel">
+                <option value="11.97">휘발유</option>
+                <option value="12.52">경유</option>
+                <option value="8.83">LPG</option>
+                <option value="15.37" selected>하이브리드</option>
+                <option value="5.22">전기</option>
+                <option value="94.9">수소</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row c4" style="margin-top:10px">
+            <div>
+              <label class="fld">연비 (Km, L당)</label>
+              <input type="number" id="eff" value="15.37" readonly>
+            </div>
+            <div>
+              <label class="fld">통행료</label>
+              <input type="number" id="toll" value="0" min="0" step="100">
+            </div>
+            <div>
+              <label class="fld">주차료</label>
+              <input type="number" id="park" value="0" min="0" step="100">
+            </div>
+            <div>
+              <label class="fld">계 (일의 자리 버림)</label>
+              <input type="text" id="fare" value="0" readonly style="text-align:right;font-weight:700">
+            </div>
+          </div>
+
+          <table class="sheet" style="margin-top:16px">
+            <thead>
+              <tr><th colspan="8">자차이용자 운임산출</th></tr>
+              <tr>
+                <th>자차이용자</th><th>거리 (Km)</th><th>단가 (출발일 기준)</th><th>유종</th>
+                <th>연비(Km, L당)</th><th>통행료</th><th>주차료</th><th>계</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td id="oDriver">-</td>
+                <td class="num" id="oDist">0</td>
+                <td class="num" id="oPrice">0</td>
+                <td id="oFuel">하이브리드</td>
+                <td class="num" id="oEff">15.37</td>
+                <td class="num" id="oToll">0</td>
+                <td class="num" id="oPark">0</td>
+                <td class="total num" id="oFare">0</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="note">
+            산출식 &lt;거리(km) × 유가(출발일 기준) ÷ 연비 + 통행료 + 주차료&gt; 에서 일의 자리를 버립니다.
+            <span id="formula" style="display:block;margin-top:4px"></span>
+            유종별 연비 (휘발유:11.97 / 경유:12.52 / LPG:8.83 / 하이브리드:15.37 / 전기:5.22 / 수소:94.9)
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- 3. 오피넷 평균판매가격 (가로 전체 폭) -->
+  <section class="card no-print">
+        <h2><span class="no">3</span>오피넷 평균판매가격
+          <span class="right">
+            <button type="button" id="btnOpiReload">새로고침</button>
+            <button type="button" id="btnOpiTab">새 창으로 열기</button>
+            <button type="button" id="btnCapOpi">화면 캡쳐</button>
+          </span>
+        </h2>
+        <div class="body">
+          <div class="framebox">
+            <iframe class="frame" id="opiFrame" title="오피넷 평균판매가격"
+                    referrerpolicy="no-referrer"></iframe>
+          </div>
+          <div class="status" id="opiStatus"></div>
+          <div class="note">
+            <b>1번</b>의 출장기간이 <b>기간(일간)</b>에 자동 입력되고, 제품은 <b>보통휘발유</b> 하나만 체크됩니다.
+            표에서 <b>출발일</b> 가격을 <b>2번 단가</b>에 입력하세요.
+            <b>당일 출장(0박 1일)</b>이면 시작일을 <b>하루 앞당겨</b> 조회합니다.
+            <span id="opiRange" style="display:block;margin-top:4px"></span>
+          </div>
+          <div class="urlbar" id="opiUrl"></div>
+        </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var $ = function(id){ return document.getElementById(id); };
+  var NAVER_URL = "https://map.naver.com/p/directions/-/-/-/car?c=15.00,0,0,0,dh";
+  var OPINET_BASE = "https://www.opinet.co.kr/user/dopospdrg/dopOsPdrgSelect.do";
+
+  var FUEL_NAME = {
+    "11.97":"휘발유", "12.52":"경유", "8.83":"LPG",
+    "15.37":"하이브리드", "5.22":"전기", "94.9":"수소"
+  };
+
+  function nf(n){ return (Math.round(n*100)/100).toLocaleString("ko-KR"); }
+  function won(n){ return Math.round(n).toLocaleString("ko-KR"); }
+  function pad(n){ return (n<10 ? "0" : "") + n; }
+  function val(id){ var v = parseFloat($(id).value); return isFinite(v) ? v : 0; }
+
+  /* ── 날짜 ─────────────────────────────── */
+  function readDate(py,pm,pd){
+    var y = parseInt($(py).value,10), m = parseInt($(pm).value,10), d = parseInt($(pd).value,10);
+    if(!y||!m||!d) return null;
+    var dt = new Date(y, m-1, d);
+    if(dt.getFullYear()!==y || dt.getMonth()!==m-1 || dt.getDate()!==d) return null; // 2월 30일 등
+    return dt;
+  }
+  function fmt(dt){ return dt.getFullYear()+"-"+pad(dt.getMonth()+1)+"-"+pad(dt.getDate()); }
+  function addDays(dt,n){ var x = new Date(dt.getTime()); x.setDate(x.getDate()+n); return x; }
+
+  var state = { nights:0, days:0, start:null, end:null, valid:false };
+
+  function calcPeriod(){
+    var s = readDate("sy","sm","sd"), e = readDate("ey","em","ed");
+    var dur = $("dur"), ptext = $("periodText");
+
+    if(!s || !e){
+      state.valid = false; dur.className = "dur bad"; dur.textContent = "날짜 확인";
+      ptext.textContent = "존재하지 않는 날짜입니다.";
+      return;
+    }
+    var nights = Math.round((e - s) / 86400000);
+    if(nights < 0){
+      state.valid = false; dur.className = "dur bad"; dur.textContent = "기간 역전";
+      ptext.textContent = "종료일이 시작일보다 빠릅니다.";
+      return;
+    }
+    state.valid = true; state.start = s; state.end = e;
+    state.nights = nights; state.days = nights + 1;
+
+    dur.className = "dur";
+    dur.textContent = "( " + nights + " )박 ( " + state.days + " )일";
+    ptext.innerHTML = "출장기간 : <b>" + fmt(s) + "</b>부터 <b>" + fmt(e) + "</b> / ( " +
+                      nights + " )박 ( " + state.days + " )일";
+  }
+
+  /* ── 2. 운임 계산 ─────────────────────── */
+  function calcFare(){
+    var fuelSel = $("fuel");
+    var eff = parseFloat(fuelSel.value);
+    $("eff").value = eff;
+
+    var dist = val("dist"), price = val("price"), toll = val("toll"), park = val("park");
+    var raw  = (eff > 0 ? (dist * price) / eff : 0) + toll + park;
+    var fare = Math.floor(raw / 10) * 10;          // 일의 자리 버림
+
+    $("fare").value = won(fare);
+
+    var fuelName = FUEL_NAME[fuelSel.value] || fuelSel.options[fuelSel.selectedIndex].text;
+    $("oDriver").textContent = $("driver").value.trim() || "-";
+    $("oDist").textContent   = nf(dist);
+    $("oPrice").textContent  = nf(price);
+    $("oFuel").textContent   = fuelName;
+    $("oEff").textContent    = eff;
+    $("oToll").textContent   = won(toll);
+    $("oPark").textContent   = won(park);
+    $("oFare").textContent   = won(fare);
+
+    $("formula").textContent =
+      nf(dist) + " × " + nf(price) + " ÷ " + eff + " + " + won(toll) + " + " + won(park) +
+      " = " + raw.toLocaleString("ko-KR",{maximumFractionDigits:2}) + " → " + won(fare) + " 원";
+
+    return fare;
+  }
+
+  /* ── 1. 정산내역서 ────────────────────── */
+  function calcSheet(fare){
+    var units = ($("basis").value === "nights") ? state.nights : state.days;
+    if(!state.valid) units = 0;
+
+    var daily = Math.round(val("rateDaily") * units);
+    var meal  = Math.round(val("rateMeal")  * units);
+    var trans = val("iTrans"), stay = val("iStay");
+    var sum   = fare + trans + stay + daily + meal;
+
+    $("cCar").textContent   = won(fare);
+    $("cDaily").textContent = won(daily);
+    $("cMeal").textContent  = won(meal);
+    $("cSum").textContent   = won(sum);
+
+    var label = ($("basis").value === "nights") ? "박" : "일";
+    $("allowCalc").innerHTML =
+      "일비 " + won(val("rateDaily")) + "원 × " + units + label + " = <b>" + won(daily) + "원</b> &nbsp;·&nbsp; " +
+      "식비 " + won(val("rateMeal"))  + "원 × " + units + label + " = <b>" + won(meal)  + "원</b>";
+  }
+
+  /* ── 4. 오피넷 URL ────────────────────── */
+  var lastOpiUrl = "";
+  function buildOpinetUrl(){
+    if(!state.valid) return "";
+    // 당일 출장(0박 1일)이면 시작일을 하루 앞당긴다. 1박 이상은 입력 그대로.
+    var s = (state.nights === 0) ? addDays(state.start, -1) : state.start;
+    var e = state.end;
+
+    var q = [
+      "TERM=D",
+      "STA_Y=" + s.getFullYear(), "STA_M=" + pad(s.getMonth()+1), "STA_D=" + pad(s.getDate()),
+      "END_Y=" + e.getFullYear(), "END_M=" + pad(e.getMonth()+1), "END_D=" + pad(e.getDate()),
+      "STA_Q=1","STA_W=1","END_Q=1","END_W=1",
+      "OIL_CD_B027=Y",          // 보통휘발유만 체크
+      "equal=Y","chk_cnt=1","all_chk_cnt=5","INIF_FLAG=N"
+    ].join("&");
+
+    return OPINET_BASE + "?" + q;
+  }
+
+  function syncOpinet(force){
+    var url = buildOpinetUrl();
+    var box = $("opiRange");
+
+    if(!url){
+      box.textContent = "출장기간을 올바르게 입력하면 자동으로 조회됩니다.";
+      return;
+    }
+    var s = (state.nights === 0) ? addDays(state.start,-1) : state.start;
+    box.innerHTML = "조회 기간 : <b>" + fmt(s) + " ~ " + fmt(state.end) + "</b>" +
+                    (state.nights === 0 ? " (당일 출장 → 전날부터)" : "");
+
+    if(force || url !== lastOpiUrl){
+      lastOpiUrl = url;
+      $("opiFrame").src = url;
+      $("opiUrl").textContent = url;
+    }
+  }
+
+  /* ── 3. 네이버 길찾기 ─────────────────── */
+  function openMap(){
+    var st = $("mapStatus");
+    var w = window.open(NAVER_URL, "_blank", "noopener");
+    if(w){
+      st.className = "status ok";
+      st.textContent = "새 탭에서 길찾기를 열었습니다.";
+    }else{
+      st.className = "status err";
+      st.textContent = "팝업이 차단되었습니다. 주소창의 팝업 허용을 켜고 다시 눌러 주세요.";
+    }
+  }
+
+  /* ── 화면 캡쳐 (getDisplayMedia) ───────── */
+  function stamp(){
+    var d = new Date();
+    return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+"_"+pad(d.getHours())+pad(d.getMinutes())+pad(d.getSeconds());
+  }
+
+  function capture(prefix, statusId){
+    var st = $(statusId);
+    var md = navigator.mediaDevices;
+
+    if(!md || !md.getDisplayMedia){
+      st.className = "status err";
+      st.textContent = "이 브라우저에서는 화면 캡쳐 기능을 쓸 수 없습니다. Win + Shift + S 로 캡쳐해 주세요.";
+      return;
+    }
+
+    st.className = "status";
+    st.textContent = "공유 대상 선택창에서 캡쳐할 창을 고르세요…";
+
+    md.getDisplayMedia({ video:{ frameRate:1 }, audio:false }).then(function(stream){
+      var track = stream.getVideoTracks()[0];
+      var video = document.createElement("video");
+      video.srcObject = stream;
+      video.muted = true;
+      video.playsInline = true;
+
+      return video.play().then(function(){
+        return new Promise(function(res){ setTimeout(res, 500); });
+      }).then(function(){
+        var cv = document.createElement("canvas");
+        cv.width  = video.videoWidth  || track.getSettings().width  || 1280;
+        cv.height = video.videoHeight || track.getSettings().height || 720;
+        cv.getContext("2d").drawImage(video, 0, 0, cv.width, cv.height);
+
+        track.stop();
+        stream.getTracks().forEach(function(t){ t.stop(); });
+
+        return new Promise(function(res){ cv.toBlob(res, "image/png"); });
+      }).then(function(blob){
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = prefix + "_" + stamp() + ".png";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+
+        st.className = "status ok";
+        st.textContent = "저장했습니다 : " + a.download;
+      });
+    }).catch(function(err){
+      st.className = "status err";
+      st.textContent = (err && err.name === "NotAllowedError")
+        ? "캡쳐가 취소되었습니다."
+        : "캡쳐에 실패했습니다 (" + (err && err.name ? err.name : "오류") + "). Win + Shift + S 를 사용해 주세요.";
+    });
+  }
+
+  /* ── 전체 갱신 ────────────────────────── */
+  function refresh(){
+    calcPeriod();
+    var fare = calcFare();
+    calcSheet(fare);
+    syncOpinet(false);
+  }
+
+  /* ── 이벤트 연결 ──────────────────────── */
+  var watched = ["sy","sm","sd","ey","em","ed","iTrans","iStay","rateDaily","rateMeal","basis",
+                 "driver","dist","price","fuel","toll","park","name1"];
+  watched.forEach(function(id){
+    var el = $(id);
+    el.addEventListener("input", refresh);
+    el.addEventListener("change", refresh);
+  });
+
+  $("btnPrint").addEventListener("click", function(){ window.print(); });
+
+  $("btnMapOpen").addEventListener("click", openMap);
+  $("btnCapMap").addEventListener("click", function(){ capture("네이버길찾기", "mapStatus"); });
+
+  $("btnOpiReload").addEventListener("click", function(){ syncOpinet(true); });
+  $("btnOpiTab").addEventListener("click", function(){
+    var u = buildOpinetUrl() || OPINET_BASE;
+    window.open(u, "_blank", "noopener");
+  });
+  $("btnCapOpi").addEventListener("click", function(){ capture("오피넷평균판매가격", "opiStatus"); });
+
+  $("btnJumpOpi").addEventListener("click", function(){
+    $("opiFrame").scrollIntoView({ behavior:"smooth", block:"center" });
+  });
+
+  /* ── 기본값 : 오늘 날짜 (당일 출장) ───── */
+  function setToday(){
+    var t = new Date();
+    $("sy").value = $("ey").value = t.getFullYear();
+    $("sm").value = $("em").value = t.getMonth() + 1;
+    $("sd").value = $("ed").value = t.getDate();
+    refresh();
+    syncOpinet(true);
+  }
+  $("btnToday").addEventListener("click", setToday);
+
+  setToday();
+})();
+</script>
+</body>
+</html>
